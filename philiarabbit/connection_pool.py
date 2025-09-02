@@ -17,12 +17,21 @@ class PhiliaRabbitConnectionPool:
         self._create_connections()
         self.lock = Lock()
 
+    def _get_connection(self):
+        return pika.BlockingConnection(self._get_parameters())
+
     def _create_connections(self):
         for _ in range(self.max_size):
             # don't block the process if there is no any slot to put connection on
             self.queue.put_nowait(
-                pika.BlockingConnection(pika.URLParameters(self.rabbit_url))
+                self._get_connection()
             )
+
+    def _get_parameters(self):
+        params = pika.URLParameters(self.rabbit_url)
+        params.heartbeat = 30
+        params.blocked_connection_timeout = 300
+        return params
 
     def get_connection(self):
         self.lock.acquire()
@@ -30,6 +39,9 @@ class PhiliaRabbitConnectionPool:
             connection = self.queue.get(block=False)
         finally:
             self.lock.release()
+
+        if not connection.is_open:
+            return self._get_connection()
         return connection
 
     def get_connection_with_channel(self):
@@ -48,11 +60,18 @@ class PhiliaRabbitConnectionPoolAsync:
         self.queue = AsyncQueue(maxsize=self.max_size)
         self.lock = AsyncLock()
 
+    async def _get_connection(self):
+        return await aio_pika.connect_robust(
+            url=self.rabbit_url,
+            heartbeat=30,
+            timeout=300
+        )
+
     async def _create_connections(self):
         for _ in range(self.max_size):
             # don't block the process if there is no any slot to put connection on
             await self.queue.put(
-                await aio_pika.connect_robust(url=self.rabbit_url)
+                self._get_connection()
             )
 
     async def get_connection(self):
@@ -61,6 +80,9 @@ class PhiliaRabbitConnectionPoolAsync:
             connection = await self.queue.get()
         finally:
             self.lock.release()
+
+        if not connection.is_open:
+            return self._get_connection()
         return connection
 
     async def get_connection_with_channel(self):
