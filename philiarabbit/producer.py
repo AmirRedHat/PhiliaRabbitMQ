@@ -47,6 +47,7 @@ class PhiliaRabbitProducer:
         if self.pool is not None:
             self.connection = self.pool.get_connection()
             self.channel = self.connection.channel()
+            return
         # TODO: implement retry mechanism
         self._connect()
 
@@ -118,6 +119,7 @@ class PhiliaRabbitProducerAsync:
         if self.pool is not None:
             self.connection = await self.pool.get_connection()
             self.channel = await self.connection.channel()
+            return
         # TODO: implement retry mechanism
         await self._connect()
 
