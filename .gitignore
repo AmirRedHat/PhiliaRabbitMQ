@@ -1,4 +1,4 @@
 dist/
-poetry.lock
 *.egg-info/
 .idea
+*.lock

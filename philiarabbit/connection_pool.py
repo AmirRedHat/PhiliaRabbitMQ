@@ -88,7 +88,7 @@ class PhiliaRabbitConnectionPool:
         self.queue.put_nowait(connection)
 
 
-class PhiliaRabbitConnectionPoolAsync:
+class AsyncPhiliaRabbitConnectionPool:
 
     def __init__(
             self,

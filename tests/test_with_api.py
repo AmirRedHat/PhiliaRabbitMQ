@@ -1,9 +1,11 @@
 import logging
 import sys
-from flask import Flask
+from flask import Flask, jsonify
 
 sys.path.insert(0, '../')
-from philiarabbit.connection_pool import PhiliaRabbitConnectionPool
+from philiarabbit.connection_pool import (
+    PhiliaRabbitConnectionPool
+)
 
 app = Flask(__name__)
 logger = logging.getLogger(__name__)

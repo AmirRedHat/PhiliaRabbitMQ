@@ -1,0 +1,47 @@
+import asyncio
+import sys
+
+from pika.exchange_type import ExchangeType
+
+sys.path.insert(0, '../')
+
+from philiarabbit.consumer import PhiliaRabbitConsumer, AsyncPhiliaRabbitConsumer
+
+
+def start_consumer():
+
+    def consumer_callback(ch, method, properties, body):
+        print("consumer callback")
+        print("data:")
+        print(body)
+
+    consumer = PhiliaRabbitConsumer(
+        rabbit_url="amqp://root:root@localhost:5672",
+        queue_name="test_queue",
+        exchange_name="exchange_test",
+        routing_keys=["data.*"],
+        exchange_type=ExchangeType.topic
+    )
+    consumer.run(consumer_callback)
+
+
+async def async_start_consumer():
+    async def consumer_callback(body):
+        print("consumer callback")
+        print("data:")
+        print(body)
+
+    consumer = AsyncPhiliaRabbitConsumer(
+        rabbit_url="amqp://root:root@localhost:5672",
+        queue_name="test_queue",
+        exchange_name="exchange_test",
+        routing_keys=["data.*"],
+        exchange_type=ExchangeType.topic
+    )
+    await consumer.run(consumer_callback)
+
+
+if __name__ == "__main__":
+    ...
+    # start_consumer()
+    asyncio.run(async_start_consumer())

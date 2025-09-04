@@ -10,26 +10,30 @@ class PhiliaRabbitProducer:
 
     def __init__(
             self,
-            rabbit_url: str = None,
-            queue_name: str = None,
+            rabbit_url: str,
             routing_key: str = None,
-            exchange: str = None,
+            exchange_name: str = "",
             connection_pool: Any = None
     ):
         """
             generate an instance of philia rabbit class
             :param rabbit_url: the url of rabbitmq instance
             :param routing_key: the routing_key that you want to send data
-            :param exchange: destination exchange
+            :param exchange_name: destination exchange
             :param connection_pool: connection pool class. in this class you must have get_connection()
             and release() methods (async).
         """
         self.rabbit_url = rabbit_url
-        self.queue_name = queue_name
         self.routing_key = routing_key
-        self.exchange = exchange
+        self.exchange_name = exchange_name
         self.pool = connection_pool
-        if not hasattr(self.pool, "get_connection") or not hasattr(self.pool, "release"):
+        if (
+                self.pool is not None and
+                (
+                    not hasattr(self.pool, "get_connection") or
+                    not hasattr(self.pool, "release")
+                )
+        ):
             raise ValueError("invalid connection pool structure "
                              "| get_connection() and release() is required")
 
@@ -67,7 +71,7 @@ class PhiliaRabbitProducer:
             self.connect()
         try:
             self.channel.basic_publish(
-                exchange=self.exchange,
+                exchange=self.exchange_name,
                 routing_key=self.routing_key,
                 body=data,
                 properties=pika.BasicProperties(
@@ -79,28 +83,34 @@ class PhiliaRabbitProducer:
                 self.disconnect()
 
 
-class PhiliaRabbitProducerAsync:
+class AsyncPhiliaRabbitProducer:
 
     def __init__(
             self,
             rabbit_url: str = None,
             routing_key: str = None,
-            exchange: str = None,
+            exchange_name: str = None,
             connection_pool: Any = None
     ):
         """
         generate an instance of philia rabbit class
         :param rabbit_url: the url of rabbitmq instance
         :param routing_key: the routing_key that you want to send data
-        :param exchange: destination exchange
+        :param exchange_name: destination exchange
         :param connection_pool: connection pool class. in this class you must have get_connection()
         and release() methods (async).
         """
         self.rabbit_url = rabbit_url
         self.routing_key = routing_key
-        self.exchange = exchange
+        self.exchange_name = exchange_name
         self.pool = connection_pool
-        if not hasattr(self.pool, "get_connection") or not hasattr(self.pool, "release"):
+        if (
+                self.pool is not None and
+                (
+                        not hasattr(self.pool, "get_connection") or
+                        not hasattr(self.pool, "release")
+                )
+        ):
             raise ValueError("invalid connection pool structure "
                              "| get_connection() and release() is required")
 
@@ -111,17 +121,17 @@ class PhiliaRabbitProducerAsync:
     async def _connect(self, loop=None):
         self.connection = await aio_pika.connect_robust(
             url=self.rabbit_url,
-            loop=None
+            loop=loop
         )
         self.channel = await self.connection.channel()
 
-    async def connect(self):
+    async def connect(self, loop=None):
         if self.pool is not None:
             self.connection = await self.pool.get_connection()
             self.channel = await self.connection.channel()
             return
         # TODO: implement retry mechanism
-        await self._connect()
+        await self._connect(loop=loop)
 
     async def disconnect(self):
         if self.channel and self.channel.is_open:
@@ -139,7 +149,7 @@ class PhiliaRabbitProducerAsync:
             await self.connect()
         try:
             await self.channel.basic_publish(
-                exchange=self.exchange,
+                exchange=self.exchange_name,
                 routing_key=self.routing_key,
                 body=data,
                 properties=pika.BasicProperties(
