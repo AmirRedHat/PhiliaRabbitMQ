@@ -66,7 +66,6 @@ class PhiliaRabbitConsumer:
                 exchange=self.exchange_name,
                 routing_key=routing_key
             )
-            print(f"{routing_key=} | {self.queue_name=} | {self.exchange_name=}")
 
         return queue
 
@@ -134,7 +133,7 @@ class AsyncPhiliaRabbitConsumer:
 
     async def run(self, callback: Callable):
         queue = await self._get_queue()
-        print("Starting RabbitMQ Consumer")
+        print("Starting RabbitMQ Consumer Asyncly")
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
                 async with message.process():
