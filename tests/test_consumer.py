@@ -24,6 +24,21 @@ def start_consumer():
     )
     consumer.run(consumer_callback)
 
+def start_consumer_with_default_exchange():
+    def consumer_callback(ch, method, properties, body):
+        print("consumer callback")
+        print("data:")
+        print(body)
+
+    consumer = PhiliaRabbitConsumer(
+        rabbit_url="amqp://guest:guest@localhost:5672",
+        queue_name="event_attributes",
+        exchange_name="",
+        routing_keys=["data.*"],
+        exchange_type=ExchangeType.topic
+    )
+    consumer.run(consumer_callback)
+
 
 async def async_start_consumer():
     async def consumer_callback(body):
@@ -32,7 +47,7 @@ async def async_start_consumer():
         print(body)
 
     consumer = AsyncPhiliaRabbitConsumer(
-        rabbit_url="amqp://root:root@localhost:5672",
+        rabbit_url="amqp://guest:guest@localhost:5672",
         queue_name="test_queue",
         exchange_name="exchange_test",
         routing_keys=["data.*"],
@@ -44,4 +59,5 @@ async def async_start_consumer():
 if __name__ == "__main__":
     ...
     # start_consumer()
-    asyncio.run(async_start_consumer())
+    # asyncio.run(async_start_consumer())
+    start_consumer_with_default_exchange()

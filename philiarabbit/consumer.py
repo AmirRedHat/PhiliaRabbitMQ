@@ -19,10 +19,13 @@ class PhiliaRabbitConsumer:
         self.rabbit_url = rabbit_url
         self.queue_name = queue_name
         self.exchange_name = exchange_name
+        self.is_default_exchange = not bool(self.exchange_name)
         # internal variables
         self.connection = None
         self.channel = None
         # setup method calls
+        if not isinstance(routing_keys, list):
+            raise ValueError("routing_keys must be a list")
         self._setup_queue(
             routing_keys=routing_keys,
             exchange_type=exchange_type,
@@ -53,19 +56,19 @@ class PhiliaRabbitConsumer:
         self.channel.basic_qos(prefetch_count=qos)
 
         queue = self.channel.queue_declare(self.queue_name, durable=True)
-        self.channel.exchange_declare(
-            self.exchange_name,
-            exchange_type,
-            durable=True
-        )
-
-        routing_keys = routing_keys or [self.queue_name]
-        for routing_key in routing_keys:
-            self.channel.queue_bind(
-                queue=self.queue_name,
-                exchange=self.exchange_name,
-                routing_key=routing_key
+        if not self.is_default_exchange:
+            self.channel.exchange_declare(
+                self.exchange_name,
+                exchange_type,
+                durable=True
             )
+            routing_keys = routing_keys if routing_keys else [self.queue_name]
+            for routing_key in routing_keys:
+                self.channel.queue_bind(
+                    queue=self.queue_name,
+                    exchange=self.exchange_name,
+                    routing_key=routing_key
+                )
 
         return queue
 
@@ -108,6 +111,9 @@ class AsyncPhiliaRabbitConsumer:
         self.exchange_name = exchange_name
         self.exchange_type = exchange_type
         self.qos = qos
+        self.is_default_exchange = not bool(self.exchange_name)
+        if not isinstance(routing_keys, list):
+            raise ValueError("routing_keys must be a list")
         self.routing_keys = routing_keys
 
     async def _get_channel(self):
@@ -119,15 +125,16 @@ class AsyncPhiliaRabbitConsumer:
         await channel.set_qos(prefetch_count=self.qos)
 
         queue = await channel.declare_queue(self.queue_name, durable=True)
-        exchange = await channel.declare_exchange(
-            self.exchange_name,
-            self.exchange_type,
-            durable=True
-        )
+        if not self.is_default_exchange:
+            exchange = await channel.declare_exchange(
+                self.exchange_name,
+                self.exchange_type,
+                durable=True
+            )
 
-        routing_keys = self.routing_keys or [self.queue_name]
-        for routing_key in routing_keys:
-            await queue.bind(exchange, routing_key=routing_key)
+            routing_keys = self.routing_keys if self.routing_keys else [self.queue_name]
+            for routing_key in routing_keys:
+                await queue.bind(exchange, routing_key=routing_key)
 
         return queue
 
