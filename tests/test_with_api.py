@@ -1,17 +1,21 @@
 import logging
 import sys
-from flask import Flask, jsonify
+from flask import Flask, json
+
+from philiarabbit.producer import PhiliaRabbitProducer
 
 sys.path.insert(0, '../')
 from philiarabbit.connection_pool import (
     PhiliaRabbitConnectionPool
 )
 
+
+RABBIT_URL = "amqp://guest:guest@localhost:5672"
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
 pool = PhiliaRabbitConnectionPool(
-    rabbit_url="amqp://root:root@localhost:5672",
-    max_size=2,
+    rabbit_url=RABBIT_URL,
+    max_size=20,
     logger=logger
 )
 
@@ -26,3 +30,11 @@ def test_connection_pool():
     channel.close()
     pool.release(connection)
     return data
+
+@app.route("/pro")
+def test_producer():
+    PhiliaRabbitProducer(
+        rabbit_url=RABBIT_URL,
+        connection_pool=pool
+    ).publish(json.dumps({"data": {"amir": "hosein"}}).encode())
+    return {"detail": "message published"}

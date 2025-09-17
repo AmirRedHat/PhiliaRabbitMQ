@@ -23,7 +23,7 @@ class PhiliaRabbitConnectionPool:
             self,
             rabbit_url: str,
             max_size: int = 3,
-            logger: logging.Logger = None,
+            logger: logging.Logger | None = None,
     ):
         self.logger = logger
         self.rabbit_url = rabbit_url
@@ -94,7 +94,7 @@ class AsyncPhiliaRabbitConnectionPool:
             self,
             rabbit_url: str,
             max_size: int = 3,
-            logger: logging.Logger = None,
+            logger: logging.Logger | None = None,
     ):
         self.logger = logger
         self.rabbit_url = rabbit_url

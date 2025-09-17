@@ -12,8 +12,8 @@ class PhiliaRabbitConsumer:
             rabbit_url: str,
             queue_name: str,
             exchange_name: str = "",
-            routing_keys: list = None,
-            exchange_type: ExchangeType = None,
+            routing_keys: list = [],
+            exchange_type: ExchangeType | None = None,
             qos: int = 1
     ) -> None:
         self.rabbit_url = rabbit_url
@@ -48,8 +48,8 @@ class PhiliaRabbitConsumer:
 
     def _setup_queue(
             self,
-            routing_keys: list[str] = None,
-            exchange_type: ExchangeType = None,
+            routing_keys: list[str] = [],
+            exchange_type: ExchangeType | None = None,
             qos: int = 1
     ):
         self._get_channel()
@@ -57,6 +57,8 @@ class PhiliaRabbitConsumer:
 
         queue = self.channel.queue_declare(self.queue_name, durable=True)
         if not self.is_default_exchange:
+            if not exchange_type:
+                raise ValueError("exchange_type cannot be none for declaring")
             self.channel.exchange_declare(
                 self.exchange_name,
                 exchange_type,
@@ -102,8 +104,8 @@ class AsyncPhiliaRabbitConsumer:
             rabbit_url: str,
             queue_name: str,
             exchange_name: str = "",
-            routing_keys: list = None,
-            exchange_type: aio_pika.ExchangeType = None,
+            routing_keys: list = [],
+            exchange_type: aio_pika.ExchangeType | None = None,
             qos: int = 1
     ) -> None:
         self.rabbit_url = rabbit_url
@@ -126,6 +128,8 @@ class AsyncPhiliaRabbitConsumer:
 
         queue = await channel.declare_queue(self.queue_name, durable=True)
         if not self.is_default_exchange:
+            if not self.exchange_type:
+                raise ValueError("exchange_type cannot be none for declaring")
             exchange = await channel.declare_exchange(
                 self.exchange_name,
                 self.exchange_type,

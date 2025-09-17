@@ -2,6 +2,7 @@ from typing import Any
 
 import pika
 from pika.delivery_mode import DeliveryMode
+from pika.exceptions import StreamLostError, ConnectionClosed, AMQPConnectionError
 
 import aio_pika
 
@@ -11,7 +12,7 @@ class PhiliaRabbitProducer:
     def __init__(
             self,
             rabbit_url: str,
-            routing_key: str = None,
+            routing_key: str = "Default",
             exchange_name: str = "",
             connection_pool: Any = None
     ):
@@ -40,16 +41,33 @@ class PhiliaRabbitProducer:
         # internal variables
         self.connection = None
         self.channel = None
+        
+    def _check_connection(self, connection: pika.BlockingConnection):
+        try:
+            if not connection.is_open:
+                return self._connect(make_channel=False)
+            connection.process_data_events(0)
+            return connection
+        except (
+                StreamLostError,
+                AttributeError,
+                ConnectionClosed,
+                AMQPConnectionError
+        ):
+            print("- reconnecting in _check_connection()...")
+            return self._connect(make_channel=False)
 
-    def _connect(self):
+    def _connect(self, make_channel: bool = True):
         self.connection = pika.BlockingConnection(
             pika.URLParameters(self.rabbit_url)
         )
-        self.channel = self.connection.channel()
+        if make_channel:
+            self.channel = self.connection.channel()
 
     def connect(self):
         if self.pool is not None:
             self.connection = self.pool.get_connection()
+            self.connection = self._check_connection(self.connection)
             self.channel = self.connection.channel()
             return
         # TODO: implement retry mechanism
@@ -87,9 +105,9 @@ class AsyncPhiliaRabbitProducer:
 
     def __init__(
             self,
-            rabbit_url: str = None,
-            routing_key: str = None,
-            exchange_name: str = None,
+            rabbit_url: str,
+            routing_key: str = "Default",
+            exchange_name: str = "",
             connection_pool: Any = None
     ):
         """
@@ -144,7 +162,7 @@ class AsyncPhiliaRabbitProducer:
         if self.connection and self.connection.is_open:
             await self.connection.close()
 
-    async def publish(self, data: Any, disconnect: bool = True):
+    async def publish(self, data: bytes, disconnect: bool = True):
         if self.connection is None or self.channel is None:
             await self.connect()
         try:

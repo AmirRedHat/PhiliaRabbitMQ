@@ -1,4 +1,3 @@
-import asyncio
 import sys
 
 from pika.exchange_type import ExchangeType
@@ -8,6 +7,8 @@ sys.path.insert(0, '../')
 from philiarabbit.consumer import PhiliaRabbitConsumer, AsyncPhiliaRabbitConsumer
 
 
+
+RABBIT_URL = "amqp://guest:guest@localhost:5672"
 def start_consumer():
 
     def consumer_callback(ch, method, properties, body):
@@ -16,7 +17,7 @@ def start_consumer():
         print(body)
 
     consumer = PhiliaRabbitConsumer(
-        rabbit_url="amqp://root:root@localhost:5672",
+        rabbit_url=RABBIT_URL,
         queue_name="test_queue",
         exchange_name="exchange_test",
         routing_keys=["data.*"],
@@ -31,10 +32,9 @@ def start_consumer_with_default_exchange():
         print(body)
 
     consumer = PhiliaRabbitConsumer(
-        rabbit_url="amqp://guest:guest@localhost:5672",
-        queue_name="event_attributes",
+        rabbit_url=RABBIT_URL,
+        queue_name="Default",
         exchange_name="",
-        routing_keys=["data.*"],
         exchange_type=ExchangeType.topic
     )
     consumer.run(consumer_callback)
