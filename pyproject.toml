@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "philiarabbit"
-version = "0.1.5"
+version = "0.1.6"
 description = ""
 authors = ["Amir RedHat <amir.ch.charehei1382@gmail.com>"]
 readme = "README.md"

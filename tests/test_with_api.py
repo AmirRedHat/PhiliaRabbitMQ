@@ -38,3 +38,5 @@ def test_producer():
         connection_pool=pool
     ).publish(json.dumps({"data": {"amir": "hosein"}}).encode())
     return {"detail": "message published"}
+
+# to run the flask api : flask --app test_with_api.py run

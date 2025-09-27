@@ -64,7 +64,8 @@ class PhiliaRabbitConnectionPool:
                 StreamLostError,
                 AttributeError,
                 ConnectionClosed,
-                AMQPConnectionError
+                AMQPConnectionError,
+                OSError,
         ):
             self._log(f"[!] Connection is corrupted: {connection.is_open=} | Reconnecting...")
             return self._get_connection()
@@ -120,8 +121,10 @@ class AsyncPhiliaRabbitConnectionPool:
             return connection
         except (
                 ConnectionClosedAsync,
-                AMQPConnectionErrorAsync
+                AMQPConnectionErrorAsync,
+                OSError,
         ):
+            await self._log(f"[!] Connection is corrupted: {connection.is_closed=} | Reconnecting...")
             return self._get_connection()
 
     async def _create_connections(self):

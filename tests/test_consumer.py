@@ -47,7 +47,7 @@ async def async_start_consumer():
         print(body)
 
     consumer = AsyncPhiliaRabbitConsumer(
-        rabbit_url="amqp://guest:guest@localhost:5672",
+        rabbit_url=RABBIT_URL,
         queue_name="test_queue",
         exchange_name="exchange_test",
         routing_keys=["data.*"],

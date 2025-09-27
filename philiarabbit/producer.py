@@ -52,7 +52,8 @@ class PhiliaRabbitProducer:
                 StreamLostError,
                 AttributeError,
                 ConnectionClosed,
-                AMQPConnectionError
+                AMQPConnectionError,
+                OSError,
         ):
             print("- reconnecting in _check_connection()...")
             return self._connect(make_channel=False)
