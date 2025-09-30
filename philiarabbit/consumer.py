@@ -1,11 +1,12 @@
 from typing import Callable
 
 import aio_pika
-import pika
 from pika.exchange_type import ExchangeType
 
+from philiarabbit.base import PhiliaRabbitBase
 
-class PhiliaRabbitConsumer:
+
+class PhiliaRabbitConsumer(PhiliaRabbitBase):
 
     def __init__(
             self,
@@ -20,9 +21,6 @@ class PhiliaRabbitConsumer:
         self.queue_name = queue_name
         self.exchange_name = exchange_name
         self.is_default_exchange = not bool(self.exchange_name)
-        # internal variables
-        self.connection = None
-        self.channel = None
         # setup method calls
         if not isinstance(routing_keys, list):
             raise ValueError("routing_keys must be a list")
@@ -34,17 +32,11 @@ class PhiliaRabbitConsumer:
 
     def _get_channel(self):
         if self.connection is None:
-            self.connection = pika.BlockingConnection(
-                pika.URLParameters(self.rabbit_url)
-            )
-        if self.channel is None:
+            self.connection = self._connect()
+        
+        self.connection = self._check_connection(self.connection)
+        if self.channel is None and self.connection is not None:
             self.channel = self.connection.channel()
-
-    def _close_connections(self):
-        if self.connection is not None and self.connection.is_open:
-            self.connection.close()
-        if self.channel is not None and self.channel.is_open:
-            self.channel.close()
 
     def _setup_queue(
             self,
@@ -55,7 +47,13 @@ class PhiliaRabbitConsumer:
         self._get_channel()
         self.channel.basic_qos(prefetch_count=qos)
 
-        queue = self.channel.queue_declare(self.queue_name, durable=True)
+        queue = self.channel.queue_declare(
+            self.queue_name, 
+            durable=True,
+            auto_delete=False,
+        )
+        
+        # automatic binding queue to exchange
         if not self.is_default_exchange:
             if not exchange_type:
                 raise ValueError("exchange_type cannot be none for declaring")
@@ -86,15 +84,15 @@ class PhiliaRabbitConsumer:
         :return: none
         """
         print("Starting RabbitMQ Consumer")
+        self.channel.basic_consume(
+            queue=self.queue_name,
+            on_message_callback=callback,
+            auto_ack=auto_ack
+        )
         try:
-            self.channel.basic_consume(
-                queue=self.queue_name,
-                on_message_callback=callback,
-                auto_ack=auto_ack
-            )
             self.channel.start_consuming()
         finally:
-            self._close_connections()
+            self._disconnect()
 
 
 class AsyncPhiliaRabbitConsumer:

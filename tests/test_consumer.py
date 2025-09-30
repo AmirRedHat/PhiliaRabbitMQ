@@ -35,7 +35,8 @@ def start_consumer_with_default_exchange():
         rabbit_url=RABBIT_URL,
         queue_name="Default",
         exchange_name="",
-        exchange_type=ExchangeType.topic
+        exchange_type=ExchangeType.topic,
+        qos=10
     )
     consumer.run(consumer_callback)
 

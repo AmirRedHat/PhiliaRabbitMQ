@@ -2,12 +2,12 @@ from typing import Any
 
 import pika
 from pika.delivery_mode import DeliveryMode
-from pika.exceptions import StreamLostError, ConnectionClosed, AMQPConnectionError
-
 import aio_pika
 
+from philiarabbit.base import PhiliaRabbitBase
 
-class PhiliaRabbitProducer:
+
+class PhiliaRabbitProducer(PhiliaRabbitBase):
 
     def __init__(
             self,
@@ -38,52 +38,15 @@ class PhiliaRabbitProducer:
             raise ValueError("invalid connection pool structure "
                              "| get_connection() and release() is required")
 
-        # internal variables
-        self.connection = None
-        self.channel = None
-        
-    def _check_connection(self, connection: pika.BlockingConnection):
-        try:
-            if not connection.is_open:
-                return self._connect(make_channel=False)
-            connection.process_data_events(0)
-            return connection
-        except (
-                StreamLostError,
-                AttributeError,
-                ConnectionClosed,
-                AMQPConnectionError,
-                OSError,
-        ):
-            print("- reconnecting in _check_connection()...")
-            return self._connect(make_channel=False)
-
-    def _connect(self, make_channel: bool = True):
-        self.connection = pika.BlockingConnection(
-            pika.URLParameters(self.rabbit_url)
-        )
-        if make_channel:
-            self.channel = self.connection.channel()
-
     def connect(self):
         if self.pool is not None:
             self.connection = self.pool.get_connection()
             self.connection = self._check_connection(self.connection)
+            if self.connection is None:
+                raise ValueError("connection cannot be none")
             self.channel = self.connection.channel()
             return
-        # TODO: implement retry mechanism
         self._connect()
-
-    def disconnect(self):
-        if self.channel and self.channel.is_open:
-            self.channel.close()
-
-        if self.pool is not None:
-            self.pool.release(self.connection)
-            return
-
-        if self.connection and self.connection.is_open:
-            self.connection.close()
 
     def publish(self, data: Any, disconnect: bool = True):
         if self.connection is None or self.channel is None:
@@ -99,7 +62,7 @@ class PhiliaRabbitProducer:
             )
         finally:
             if disconnect:
-                self.disconnect()
+                self._disconnect()
 
 
 class AsyncPhiliaRabbitProducer:

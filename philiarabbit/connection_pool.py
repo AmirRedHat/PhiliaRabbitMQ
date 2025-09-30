@@ -4,7 +4,6 @@ from queue import Empty
 from threading import Lock
 
 import pika
-from pika.exceptions import StreamLostError, ConnectionClosed, AMQPConnectionError
 
 from asyncio import Queue as AsyncQueue
 from asyncio.queues import QueueEmpty as AsyncQueueEmpty
@@ -16,8 +15,10 @@ from aio_pika.exceptions import (
     ConnectionClosed as ConnectionClosedAsync
 )
 
+from philiarabbit.base import PhiliaRabbitBase
 
-class PhiliaRabbitConnectionPool:
+
+class PhiliaRabbitConnectionPool(PhiliaRabbitBase):
 
     def __init__(
             self,
@@ -32,61 +33,33 @@ class PhiliaRabbitConnectionPool:
         self._create_connections()
         self.lock = Lock()
 
-    def _log(self, *args, **kwargs):
-        if self.logger is not None:
-            self.logger.warning(*args, **kwargs)
-
-    def _get_connection(self):
-        return pika.BlockingConnection(self._get_parameters())
-
     def _create_connections(self):
         for _ in range(self.max_size):
             # don't block the process if there is no any slot to put connection on
             self.queue.put_nowait(
-                self._get_connection()
+                self._connect()
             )
         self._log(f"{self.max_size} connections created")
-
-    def _get_parameters(self):
-        params = pika.URLParameters(self.rabbit_url)
-        params.heartbeat = 60
-        params.blocked_connection_timeout = 200
-        params.socket_timeout = 200
-        return params
-
-    def _ensure_connection_is_ok(self, connection: pika.BlockingConnection):
-        try:
-            if not connection.is_open:
-                return self._get_connection()
-            connection.process_data_events(0)
-            return connection
-        except (
-                StreamLostError,
-                AttributeError,
-                ConnectionClosed,
-                AMQPConnectionError,
-                OSError,
-        ):
-            self._log(f"[!] Connection is corrupted: {connection.is_open=} | Reconnecting...")
-            return self._get_connection()
 
     def get_connection(self):
         with self.lock:
             try:
                 connection = self.queue.get(block=False)
             except Empty:
-                return self._get_connection()
+                return self._connect()
 
-        connection = self._ensure_connection_is_ok(connection)
-        return connection
+        return self._check_connection(connection)
 
     def get_connection_with_channel(self):
         connection = self.get_connection()
+        if connection is None:
+            raise ValueError("connection cannot be none")
         return connection, connection.channel()
 
-    def release(self, connection: pika.BlockingConnection):
-        connection = self._ensure_connection_is_ok(connection)
-        self.queue.put_nowait(connection)
+    def release(self, connection: pika.BlockingConnection | None):
+        self.queue.put_nowait(
+            self._check_connection(connection)
+        )
 
 
 class AsyncPhiliaRabbitConnectionPool:
@@ -141,13 +114,13 @@ class AsyncPhiliaRabbitConnectionPool:
             except AsyncQueueEmpty:
                 return await self._get_connection()
 
-        connection = await self._ensure_connection_is_ok(connection)
-        return connection
+        return await self._ensure_connection_is_ok(connection)
 
     async def get_connection_with_channel(self):
         connection = await self.get_connection()
         return connection, await connection.channel()
 
     async def release(self, connection):
-        connection = await self._ensure_connection_is_ok(connection)
-        await self.queue.put(connection)
+        await self.queue.put(
+            await self._ensure_connection_is_ok(connection)
+        )

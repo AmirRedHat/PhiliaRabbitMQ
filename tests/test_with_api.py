@@ -15,7 +15,7 @@ app = Flask(__name__)
 logger = logging.getLogger(__name__)
 pool = PhiliaRabbitConnectionPool(
     rabbit_url=RABBIT_URL,
-    max_size=20,
+    max_size=4,
     logger=logger
 )
 
