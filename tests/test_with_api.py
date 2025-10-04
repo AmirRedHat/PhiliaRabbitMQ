@@ -35,8 +35,9 @@ def test_connection_pool():
 def test_producer():
     PhiliaRabbitProducer(
         rabbit_url=RABBIT_URL,
-        connection_pool=pool
-    ).publish(json.dumps({"data": {"amir": "hosein"}}).encode())
+        connection_pool=pool,
+        logger=logger
+    ).publish(json.dumps({"data": {"amir": "hosein"}}).encode(), disconnect=True)
     return {"detail": "message published"}
 
 # to run the flask api : flask --app test_with_api.py run

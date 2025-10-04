@@ -1,3 +1,4 @@
+import contextlib
 from logging import Logger
 from typing import Any
 import socket
@@ -7,6 +8,7 @@ from pika.exceptions import (
     ProbableAuthenticationError,
     ProbableAccessDeniedError,
     StreamLostError,
+    ChannelClosedByBroker,
 )
 
 
@@ -51,7 +53,8 @@ class PhiliaRabbitBase:
     def _disconnect(self):
         if self.channel and self.channel.is_open:
             self._log("[+] Channel closed")
-            self.channel.close()
+            with contextlib.suppress(ChannelClosedByBroker):
+                self.channel.close()
 
         if self.pool is not None:
             self.pool.release(self.connection)
@@ -80,10 +83,11 @@ class PhiliaRabbitBase:
                 ConnectionRefusedError,
                 StreamLostError,
                 Exception,
-        ):
+        ) as er:
             self._log(
-                msg="[-] reconnecting in _check_connection()...",
-                extra=locals()
+                msg=f"[-] reconnecting in _check_connection(): {er}",
+                extra=locals(),
+                exc_info=True
             )
             if make_new_connection:
                 return self._connect(make_channel=False)
