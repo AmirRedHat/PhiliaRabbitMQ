@@ -45,6 +45,7 @@ class PhiliaRabbitConnectionPool(PhiliaRabbitBase):
         with self.lock:
             try:
                 connection = self.queue.get(block=False)
+                self._log("[+] connection fetched from queue in connection pool module")
             except Empty:
                 return self._connect()
 

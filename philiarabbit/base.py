@@ -78,7 +78,7 @@ class PhiliaRabbitBase:
                 Exception,
         ):
             self._log(
-                msg="- reconnecting in _check_connection()...",
+                msg="[-] reconnecting in _check_connection()...",
                 extra=locals()
             )
             if make_new_connection:

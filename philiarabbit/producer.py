@@ -39,6 +39,9 @@ class PhiliaRabbitProducer(PhiliaRabbitBase):
                              "| get_connection() and release() is required")
 
     def connect(self):
+        """ 
+            Get connection and make channel and setup them on self.connection and self.channel variable
+        """
         if self.pool is not None:
             self.connection = self.pool.get_connection()
             self.connection = self._check_connection(self.connection)
@@ -46,7 +49,7 @@ class PhiliaRabbitProducer(PhiliaRabbitBase):
                 raise ValueError("connection cannot be none")
             self.channel = self.connection.channel()
             return
-        self._connect()
+        self._connect(make_channel=True)
 
     def publish(self, data: Any, disconnect: bool = True):
         if self.connection is None or self.channel is None:
