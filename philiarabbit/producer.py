@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import pika
@@ -14,7 +15,8 @@ class PhiliaRabbitProducer(PhiliaRabbitBase):
             rabbit_url: str,
             routing_key: str = "Default",
             exchange_name: str = "",
-            connection_pool: Any = None
+            connection_pool: Any = None,
+            logger: logging.Logger | None = None,
     ):
         """
             generate an instance of philia rabbit class
@@ -28,6 +30,7 @@ class PhiliaRabbitProducer(PhiliaRabbitBase):
         self.routing_key = routing_key
         self.exchange_name = exchange_name
         self.pool = connection_pool
+        self.logger = logger
         if (
                 self.pool is not None and
                 (
@@ -43,6 +46,7 @@ class PhiliaRabbitProducer(PhiliaRabbitBase):
             Get connection and make channel and setup them on self.connection and self.channel variable
         """
         if self.pool is not None:
+            self._log("[+] Getting connection from pool")
             self.connection = self.pool.get_connection()
             self.connection = self._check_connection(self.connection)
             if self.connection is None:

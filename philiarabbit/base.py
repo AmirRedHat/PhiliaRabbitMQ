@@ -50,13 +50,16 @@ class PhiliaRabbitBase:
         
     def _disconnect(self):
         if self.channel and self.channel.is_open:
+            self._log("[+] Channel closed")
             self.channel.close()
 
         if self.pool is not None:
             self.pool.release(self.connection)
+            self._log("[+] Connection released in pool")
             return
 
         if self.connection and self.connection.is_open:
+            self._log("[+] Connection Closed")
             self.connection.close()
     
     def _check_connection(self, connection: pika.BlockingConnection | None, make_new_connection: bool = True) -> pika.BlockingConnection | None:
@@ -67,6 +70,7 @@ class PhiliaRabbitBase:
             if not connection.is_open:
                 return self._connect(make_channel=False)
             connection.process_data_events(0)
+            self._log("[+] Connection is OK")
             return connection
         except (
                 AMQPConnectionError,
